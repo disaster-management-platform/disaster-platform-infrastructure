@@ -1,6 +1,5 @@
 """Idempotent realm configuration through the supported Keycloak administration API."""
 import json,os,ssl,urllib.request,urllib.parse,urllib.error
-from pathlib import Path
 
 base=os.environ['KC_PUBLIC_URL'].rstrip('/')
 if not base.startswith('https://'):raise ValueError('HTTPS required')
@@ -30,12 +29,11 @@ for name in ['disasters-api','reconstruction-api','damage-assessment-api','integ
 for name in ['razor-web','android']:
     redirect=os.environ['KC_RAZOR_REDIRECT_URI'] if name=='razor-web' else os.environ['KC_ANDROID_REDIRECT_URI']
     clients.append({'clientId':name,'protocol':'openid-connect','enabled':True,'publicClient':name=='android','standardFlowEnabled':True,'directAccessGrantsEnabled':False,'implicitFlowEnabled':False,'redirectUris':[redirect],'webOrigins':[],'fullScopeAllowed':False,'attributes':{'pkce.code.challenge.method':'S256'},'protocolMappers':claims})
-for name,audience in [('assessment-disasters','disasters-api'),('integration-disasters','disasters-api'),('reconstruction-damage','damage-assessment-api'),('reconstruction-disasters','disasters-api')]:
+for name,audience in [('assessment-disasters','disasters-api'),('integration-disasters','disasters-api'),('integration-disasters-read','disasters-api'),('reconstruction-damage','damage-assessment-api'),('reconstruction-disasters','disasters-api')]:
     clients.append({'clientId':name,'protocol':'openid-connect','enabled':True,'publicClient':False,'serviceAccountsEnabled':True,'standardFlowEnabled':False,'directAccessGrantsEnabled':False,'fullScopeAllowed':False,'protocolMappers':claims+[mapper('audience','oidc-audience-mapper',{'included.client.audience':audience,'access.token.claim':'true'})]})
 existing={c['clientId']:c for c in request(root+'/clients',token=token)}
 for client in clients:
     if client['clientId'] not in existing:request(root+'/clients',client,token)
-print('Realm and clients provisioned. No roles or organization/disaster grants assigned automatically.')
 # Claims used for authorization are administratively managed, never self-service attributes.
 profile=request(root+'/users/profile',token=token)
 profile['attributes']=[a for a in profile.get('attributes',[]) if a['name'] not in ('organization_id','disaster_id')]+[{'name':name,'permissions':{'view':['admin'],'edit':['admin']},'multivalued':name=='disaster_id'} for name in ['organization_id','disaster_id']]
@@ -55,3 +53,6 @@ for audience in ['disasters-api','reconstruction-api','damage-assessment-api','i
         scopes={s['name']:s for s in request(root+'/client-scopes',token=token)}
     for name in ['razor-web','android']:
         put(root+'/clients/'+existing[name]['id']+'/optional-client-scopes/'+scopes[audience]['id'],{})
+put(root,{'sslRequired':'all','bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'otpPolicyType':'totp','otpPolicyAlgorithm':'HmacSHA256','otpPolicyDigits':6,'otpPolicyPeriod':30,'eventsEnabled':True,'eventsExpiration':86400,'adminEventsEnabled':True,'adminEventsDetailsEnabled':False})
+put(root+'/authentication/required-actions/CONFIGURE_TOTP',{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':True,'defaultAction':True,'priority':10})
+print('Realm and clients provisioned. No roles or organization/disaster grants assigned automatically.')
