@@ -29,6 +29,8 @@ for name in ['disasters-api','reconstruction-api','damage-assessment-api','integ
 for name in ['razor-web','android']:
     redirect=os.environ['KC_RAZOR_REDIRECT_URI'] if name=='razor-web' else os.environ['KC_ANDROID_REDIRECT_URI']
     clients.append({'clientId':name,'protocol':'openid-connect','enabled':True,'publicClient':name=='android','standardFlowEnabled':True,'directAccessGrantsEnabled':False,'implicitFlowEnabled':False,'redirectUris':[redirect],'webOrigins':[],'fullScopeAllowed':False,'attributes':{'pkce.code.challenge.method':'S256'},'protocolMappers':claims})
+if os.environ.get('KC_EDEN_REDIRECT_URI'):
+    clients.append({'clientId':'eden','protocol':'openid-connect','enabled':True,'publicClient':False,'standardFlowEnabled':True,'directAccessGrantsEnabled':False,'implicitFlowEnabled':False,'fullScopeAllowed':False,'redirectUris':[os.environ['KC_EDEN_REDIRECT_URI']],'webOrigins':[],'attributes':{'pkce.code.challenge.method':'S256'},'protocolMappers':[claims[0]]})
 for name,audience in [('assessment-disasters','disasters-api'),('integration-disasters','disasters-api'),('integration-disasters-read','disasters-api'),('reconstruction-damage','damage-assessment-api'),('reconstruction-disasters','disasters-api')]:
     clients.append({'clientId':name,'protocol':'openid-connect','enabled':True,'publicClient':False,'serviceAccountsEnabled':True,'standardFlowEnabled':False,'directAccessGrantsEnabled':False,'fullScopeAllowed':False,'protocolMappers':claims+[mapper('audience','oidc-audience-mapper',{'included.client.audience':audience,'access.token.claim':'true'})]})
 existing={c['clientId']:c for c in request(root+'/clients',token=token)}
