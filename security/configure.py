@@ -14,7 +14,7 @@ def request(path,body=None,token=None,form=False):
         return json.load(response) if response.status!=204 and response.headers.get('Content-Length')!='0' else None
 
 token=request('/realms/master/protocol/openid-connect/token',{'client_id':'admin-cli','grant_type':'password','username':os.environ['KC_BOOTSTRAP_ADMIN_USERNAME'],'password':os.environ['KC_BOOTSTRAP_ADMIN_PASSWORD']},form=True)['access_token']
-roles=['disasters.admin','disasters.integration','reconstruction.read','reconstruction.write','damage.read','damage.write','damage.admin','org.read','org.admin','people.read','people.write','coordination.read','coordination.write']
+roles=['disasters.admin','disasters.integration','reconstruction.read','reconstruction.write','damage.read','damage.write','damage.admin','org.read','org.admin','org.create','people.read','people.write','coordination.read','coordination.write']
 for name in ['monitoring','gis','hospital','administrative','financial']:roles.append('integration.'+name)
 realm={'realm':'platform','enabled':True,'sslRequired':'all','registrationAllowed':False,'resetPasswordAllowed':True,'bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'otpPolicyType':'totp','otpPolicyAlgorithm':'HmacSHA256','otpPolicyDigits':6,'otpPolicyPeriod':30,'requiredActions':[{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':True,'defaultAction':True,'priority':10}],'roles':{'realm':[{'name':r} for r in roles]}}
 try:request('/admin/realms',realm,token)
@@ -44,6 +44,9 @@ def put(path,body):
     req=urllib.request.Request(base+path,data=json.dumps(body).encode(),headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'},method='PUT')
     with urllib.request.urlopen(req,context=context,timeout=15):pass
 put(root+'/users/profile',profile)
+realm_roles={r['name']:r for r in request(root+'/roles',token=token)}
+for role in roles:
+    if role not in realm_roles: request(root+'/roles',{'name':role},token)
 realm_roles={r['name']:r for r in request(root+'/roles',token=token)}
 existing={c['clientId']:c for c in request(root+'/clients',token=token)}
 for name in ['razor-web','android']:
