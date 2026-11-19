@@ -51,6 +51,7 @@ realm_roles={r['name']:r for r in request(root+'/roles',token=token)}
 existing={c['clientId']:c for c in request(root+'/clients',token=token)}
 for name in ['razor-web','android']:
     request(root+'/clients/'+existing[name]['id']+'/scope-mappings/realm',[realm_roles[r] for r in roles],token)
+put(root+'/clients/'+existing['razor-web']['id'], {'attributes': {**existing['razor-web'].get('attributes', {}), 'post.logout.redirect.uris': urllib.parse.urljoin(os.environ['KC_RAZOR_REDIRECT_URI'], '/signout-callback-oidc')}})
 scopes={s['name']:s for s in request(root+'/client-scopes',token=token)}
 for audience in ['disasters-api','reconstruction-api','damage-assessment-api','integration-service']:
     if audience not in scopes:
