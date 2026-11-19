@@ -4,17 +4,17 @@ import json,os,ssl,urllib.request,urllib.parse,urllib.error
 base=os.environ['KC_PUBLIC_URL'].rstrip('/')
 if not base.startswith('https://'):raise ValueError('HTTPS required')
 context=ssl.create_default_context(cafile=os.environ.get('KC_CA_FILE'))
-def request(path,body=None,token=None,form=False):
+def request(path,body=None,token=None,form=False,method=None):
     headers={}
     if token:headers['Authorization']='Bearer '+token
     if body is not None:
         body=urllib.parse.urlencode(body).encode() if form else json.dumps(body).encode()
         headers['Content-Type']='application/x-www-form-urlencoded' if form else 'application/json'
-    with urllib.request.urlopen(urllib.request.Request(base+path,data=body,headers=headers),context=context,timeout=15) as response:
+    with urllib.request.urlopen(urllib.request.Request(base+path,data=body,headers=headers,method=method),context=context,timeout=15) as response:
         return json.load(response) if response.status!=204 and response.headers.get('Content-Length')!='0' else None
 
 token=request('/realms/master/protocol/openid-connect/token',{'client_id':'admin-cli','grant_type':'password','username':os.environ['KC_BOOTSTRAP_ADMIN_USERNAME'],'password':os.environ['KC_BOOTSTRAP_ADMIN_PASSWORD']},form=True)['access_token']
-roles=['disasters.admin','disasters.integration','reconstruction.read','reconstruction.write','damage.read','damage.write','damage.admin','org.read','org.admin','org.create','people.read','people.write','coordination.read','coordination.write']
+roles=['disasters.read','disasters.organization.read','disasters.write','disasters.admin','disasters.integration','reconstruction.read','reconstruction.write','damage.read','damage.write','damage.admin','org.read','org.admin','org.create','people.read','people.write','coordination.read','coordination.write']
 for name in ['monitoring','gis','hospital','administrative','financial']:roles.append('integration.'+name)
 realm={'realm':'platform','enabled':True,'sslRequired':'all','registrationAllowed':False,'resetPasswordAllowed':True,'bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'requiredActions':[{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':False,'defaultAction':False,'priority':10}],'roles':{'realm':[{'name':r} for r in roles]}}
 try:request('/admin/realms',realm,token)
@@ -60,6 +60,15 @@ for audience in ['disasters-api','reconstruction-api','damage-assessment-api','i
     for name in ['razor-web','android']:
         put(root+'/clients/'+existing[name]['id']+'/optional-client-scopes/'+scopes[audience]['id'],{})
 put(root,{'sslRequired':'all','bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'eventsEnabled':True,'eventsExpiration':86400,'adminEventsEnabled':True,'adminEventsDetailsEnabled':False})
+for name in ['assessment-disasters','integration-disasters-read','reconstruction-disasters']:
+    client=existing[name]
+    user=request(root+'/clients/'+client['id']+'/service-account-user',token=token)
+    user_roles=root+'/users/'+user['id']+'/role-mappings/realm'
+    client_roles=root+'/clients/'+client['id']+'/scope-mappings/realm'
+    for path in [user_roles,client_roles]:
+        request(path,[realm_roles['disasters.organization.read']],token)
+        legacy=[role for role in request(path,token=token) if role['name']=='reconstruction.read']
+        if legacy:request(path,legacy,token,method='DELETE')
 def password_authentication():
     put(root+'/authentication/required-actions/CONFIGURE_TOTP',{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':False,'defaultAction':False,'priority':10})
     settings=request(root,token=token)
@@ -75,4 +84,4 @@ def password_authentication():
             if 'CONFIGURE_TOTP' in actions:
                 put(root+'/users/'+user['id'],{'requiredActions':[action for action in actions if action!='CONFIGURE_TOTP']})
 password_authentication()
-print('Realm and clients provisioned. No roles or organization/disaster grants assigned automatically.')
+print('Realm and clients provisioned with dedicated Disaster service read roles. Organization/disaster grants remain explicit.')
