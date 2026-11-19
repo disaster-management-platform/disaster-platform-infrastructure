@@ -16,7 +16,7 @@ def request(path,body=None,token=None,form=False):
 token=request('/realms/master/protocol/openid-connect/token',{'client_id':'admin-cli','grant_type':'password','username':os.environ['KC_BOOTSTRAP_ADMIN_USERNAME'],'password':os.environ['KC_BOOTSTRAP_ADMIN_PASSWORD']},form=True)['access_token']
 roles=['disasters.admin','disasters.integration','reconstruction.read','reconstruction.write','damage.read','damage.write','damage.admin','org.read','org.admin','org.create','people.read','people.write','coordination.read','coordination.write']
 for name in ['monitoring','gis','hospital','administrative','financial']:roles.append('integration.'+name)
-realm={'realm':'platform','enabled':True,'sslRequired':'all','registrationAllowed':False,'resetPasswordAllowed':True,'bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'otpPolicyType':'totp','otpPolicyAlgorithm':'HmacSHA256','otpPolicyDigits':6,'otpPolicyPeriod':30,'requiredActions':[{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':True,'defaultAction':True,'priority':10}],'roles':{'realm':[{'name':r} for r in roles]}}
+realm={'realm':'platform','enabled':True,'sslRequired':'all','registrationAllowed':False,'resetPasswordAllowed':True,'bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'requiredActions':[{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':False,'defaultAction':False,'priority':10}],'roles':{'realm':[{'name':r} for r in roles]}}
 try:request('/admin/realms',realm,token)
 except urllib.error.HTTPError as failure:
     if failure.code!=409:raise
@@ -59,6 +59,20 @@ for audience in ['disasters-api','reconstruction-api','damage-assessment-api','i
         scopes={s['name']:s for s in request(root+'/client-scopes',token=token)}
     for name in ['razor-web','android']:
         put(root+'/clients/'+existing[name]['id']+'/optional-client-scopes/'+scopes[audience]['id'],{})
-put(root,{'sslRequired':'all','bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'otpPolicyType':'totp','otpPolicyAlgorithm':'HmacSHA256','otpPolicyDigits':6,'otpPolicyPeriod':30,'eventsEnabled':True,'eventsExpiration':86400,'adminEventsEnabled':True,'adminEventsDetailsEnabled':False})
-put(root+'/authentication/required-actions/CONFIGURE_TOTP',{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':True,'defaultAction':True,'priority':10})
+put(root,{'sslRequired':'all','bruteForceProtected':True,'accessTokenLifespan':300,'revokeRefreshToken':True,'refreshTokenMaxReuse':0,'eventsEnabled':True,'eventsExpiration':86400,'adminEventsEnabled':True,'adminEventsDetailsEnabled':False})
+def password_authentication():
+    put(root+'/authentication/required-actions/CONFIGURE_TOTP',{'alias':'CONFIGURE_TOTP','name':'Configure OTP','providerId':'CONFIGURE_TOTP','enabled':False,'defaultAction':False,'priority':10})
+    settings=request(root,token=token)
+    for alias in {settings['browserFlow'],settings['directGrantFlow']}:
+        path=root+'/authentication/flows/'+urllib.parse.quote(alias,safe='')+'/executions'
+        for execution in request(path,token=token):
+            if execution.get('providerId') in {'auth-otp-form','direct-grant-validate-otp','auth-conditional-otp-form'} or execution.get('displayName') in {'Browser - Conditional 2FA','Direct Grant - Conditional OTP'}:
+                if execution['requirement']!='DISABLED':
+                    put(path,{'id':execution['id'],'requirement':'DISABLED'})
+    for offset in range(0,request(root+'/users/count',token=token),100):
+        for user in request(root+'/users?first='+str(offset)+'&max=100',token=token):
+            actions=user.get('requiredActions',[])
+            if 'CONFIGURE_TOTP' in actions:
+                put(root+'/users/'+user['id'],{'requiredActions':[action for action in actions if action!='CONFIGURE_TOTP']})
+password_authentication()
 print('Realm and clients provisioned. No roles or organization/disaster grants assigned automatically.')

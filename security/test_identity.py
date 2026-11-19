@@ -1,5 +1,5 @@
-"""Real issuer, Client Credentials and browser OTP checks against an isolated realm."""
-import runpy,os,json,time,urllib.request,urllib.parse,urllib.error,base64,secrets,hashlib,hmac,struct,sys
+"""Real issuer, Client Credentials and password/PKCE checks against an isolated realm."""
+import runpy,os,json,time,urllib.request,urllib.parse,urllib.error,base64,secrets,hashlib,sys
 import jwt
 from pathlib import Path
 import requests
@@ -26,8 +26,8 @@ if '--browser-only' not in sys.argv:
     assert two['access_token'] and two['expires_in']>0
     print('PASS real Client Credentials, scope, audience, administrative claims and repeated acquisition')
 # A synthetic browser user is provisioned only by this test, with no business roles.
-name='mfa-'+secrets.token_hex(5);password=secrets.token_urlsafe(30)
-request(root+'/users',{'username':name,'enabled':True,'email':name+'@example.invalid','emailVerified':True,'firstName':'Synthetic','lastName':'Security','credentials':[{'type':'password','value':password,'temporary':False}],'requiredActions':['CONFIGURE_TOTP']},admin)
+name='password-'+secrets.token_hex(5);password=secrets.token_urlsafe(30)
+request(root+'/users',{'username':name,'enabled':True,'email':name+'@example.invalid','emailVerified':True,'firstName':'Synthetic','lastName':'Security','credentials':[{'type':'password','value':password,'temporary':False}]},admin)
 uid=next(u['id'] for u in request(root+'/users?username='+name,token=admin) if u['username']==name)
 s=requests.Session();s.verify=os.environ['KC_CA_FILE'];verifier=secrets.token_urlsafe(48);challenge=base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip('=')
 params={'client_id':'android','redirect_uri':os.environ['KC_ANDROID_REDIRECT_URI'],'response_type':'code','scope':'openid','code_challenge':challenge,'code_challenge_method':'S256','state':secrets.token_urlsafe(20),'nonce':secrets.token_urlsafe(20)}
@@ -37,15 +37,10 @@ def submit(response,values):
  fields={i['name']:i.get('value','') for i in form.select('input[name]')};fields.update(values)
  return s.post(urllib.parse.urljoin(response.url,form['action']),data=fields,allow_redirects=False,timeout=15)
 r=submit(r,{'username':name,'password':password})
-while r.is_redirect:r=s.get(urllib.parse.urljoin(base,r.headers['Location']),timeout=15)
-soup=BeautifulSoup(r.text,'html.parser');field=soup.select_one('input[name=totpSecret]');assert field is not None,'OTP enrollment required'
-manual=soup.select_one('a[href*=manual]')
-if soup.select_one('#kc-totp-secret-key') is None and manual:
- r=s.get(urllib.parse.urljoin(r.url,manual['href']),timeout=15);soup=BeautifulSoup(r.text,'html.parser')
-seed=soup.select_one('#kc-totp-secret-key').get_text(strip=True);counter=struct.pack('>Q',int(time.time())//30);digest=hmac.new(base64.b32decode(seed.replace(' ','')+'='*((-len(seed.replace(' ','')))%8),casefold=True),counter,hashlib.sha256).digest();offset=digest[-1]&15;otp=str((struct.unpack('>I',digest[offset:offset+4])[0]&0x7fffffff)%1000000).zfill(6)
-r=submit(r,{'totp':otp,'userLabel':'Synthetic authenticator'})
-assert r.is_redirect,r.status_code
-credentials=request(root+'/users/'+uid+'/credentials',token=admin);assert any(x['type']=='otp' for x in credentials)
+assert r.is_redirect, 'Password authentication must complete without OTP enrollment'
+credentials=request(root+'/users/'+uid+'/credentials',token=admin)
+assert not any(x['type']=='otp' for x in credentials)
+assert 'CONFIGURE_TOTP' not in request(root+'/users/'+uid,token=admin).get('requiredActions',[])
 location=urllib.parse.urlparse(r.headers['Location'])
 query=urllib.parse.parse_qs(location.query)
 assert query.get('state')==[params['state']] and query.get('code')
@@ -59,7 +54,7 @@ assert renewed['access_token'] and renewed['refresh_token']!=browser['refresh_to
 try:request('/realms/platform/protocol/openid-connect/token',{'grant_type':'refresh_token','client_id':'android','refresh_token':browser['refresh_token']},form=True)
 except urllib.error.HTTPError as failure:assert failure.code==400
 else:raise AssertionError('Reused refresh token accepted')
-print('PASS browser MFA, Authorization Code/S256 PKCE, ID-token nonce/signature and refresh rotation/replay denial')
+print('PASS password-only browser, Authorization Code/S256 PKCE, ID-token nonce/signature and refresh rotation/replay denial')
 
 if '--browser-only' not in sys.argv:
     keys=request('/realms/platform/protocol/openid-connect/certs')['keys']
