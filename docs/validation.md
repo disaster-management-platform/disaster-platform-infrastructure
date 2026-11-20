@@ -45,4 +45,12 @@ No se midieron disponibilidad porcentual, throughput, capacidad de usuarios ni o
 
 ## Distribución y clon independiente
 
-El manifiesto final de imágenes y los resultados de `pull`/arranque desde el clon independiente se registran al completar la publicación. El arranque reutiliza las identidades y datos autorizados existentes; no implica restauración de un host vacío sin configuración ni respaldo de datos.
+Las siete imágenes de aplicación se publicaron en GHCR y se fijaron por digest en [images.lock.json](../images.lock.json); las dependencias también están fijadas en `.env.example`. Un clon independiente obtenido de GitHub en el commit `0c08d1b`, con únicamente infraestructura/configuración y sin invocar .NET, Java o Maven del host, ejecutó en secuencia `docker compose config --quiet`, `docker compose pull`, `./scripts/bootstrap.sh`, `docker compose up -d --wait`, `./scripts/smoke-test.sh` y `./scripts/verify-session.sh`: todos pasaron. Los once servicios base alcanzaron `healthy`. Se suministró únicamente la configuración privada autorizada y se reutilizaron los volúmenes persistentes existentes; no se afirma una restauración de un host vacío sin respaldo/configuración.
+
+El artefacto Android se publicó en GitHub Releases, se descargó nuevamente y su SHA-256 coincidió con el APK instalado y probado. Las imágenes Java requirieron reintentar la publicación después de un error `unknown blob` de GHCR; el `pull` final por digest pasó para todas.
+
+Después de esa validación se devolvieron los contenedores a los montajes del repositorio de trabajo definitivo y al overlay de dos réplicas. El directorio temporal del clon y el túnel/emulador de prueba no son dependencias del despliegue final.
+
+La CA privada de esta demostración se usa explícitamente en las pruebas HTTP, en los bundles de los contenedores y en el APK Debug. La instalación de esa CA en el almacén del sistema/navegador del host sigue pendiente: `sudo -n true` confirmó que este entorno requiere una contraseña administrativa no disponible. No se desactivó la verificación TLS ni se aceptó una excepción de certificado en el navegador. Ver [deployment.md](deployment.md) para la acción administrativa necesaria antes de abrir el portal con ese cliente.
+
+Verificación final tras devolver los montajes al repositorio definitivo: 13 contenedores `healthy`, siete referencias de aplicación iguales a `images.lock.json`, ningún bind a directorios temporales u otros repositorios, solo el ingreso con puerto de host, pools .NET máximos de 20 con `VerifyFull` y ausencia de `KC_BOOTSTRAP_*`. El smoke test y el login/logout reproducible volvieron a pasar; la evaluación conservó sus coordenadas y el reporte del proyecto siguió `Closed`.

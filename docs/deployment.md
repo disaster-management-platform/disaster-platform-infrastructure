@@ -89,3 +89,15 @@ Con el overlay de réplicas activo, incluir también `-f compose.yaml -f compose
 Ver [android.md](android.md) para el artefacto exacto, hash, configuración HTTPS y prueba offline. No instalar .NET/Java en el servidor para distribuirlo. La adquisición nativa OIDC del cliente Android sigue limitada por lo que ya implementa su repositorio; no se presenta una pantalla Debug de importación de token como un login móvil OIDC terminado.
 
 La documentación detallada anterior de identidad se conserva en [identity.md](identity.md). Un administrador de Keycloak no adquiere por ello permisos funcionales. Los usuarios conservan roles, organización y concesiones de desastre; los workers usan el alcance del evento de dominio y no una identidad humana suplantada.
+
+
+## Confianza del navegador en la demostración local
+
+Este host no permite instalar la CA del sistema sin contraseña de sudo. Los contenedores y el APK ya usan su ancla autorizada. Antes del acceso desde el navegador, el administrador puede instalar **solo el certificado público**:
+
+```bash
+sudo install -m 644 config/tls/deployment-ca.crt /usr/local/share/ca-certificates/reconecta-task11.crt
+sudo update-ca-certificates
+```
+
+Si el navegador mantiene un almacén propio, importar también `config/tls/deployment-ca.crt` como autoridad confiable. No importar `server.key` ni usar opciones que omitan la comprobación TLS. En un despliegue con certificado de una CA ya confiable, suministrar su cadena autorizada y no instalar esta CA de demostración.
