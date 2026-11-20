@@ -49,3 +49,8 @@ Existing identity volumes must be migrated administratively before switching dat
 With `KC_EDEN_REDIRECT_URI`, provisioning also creates the confidential `eden` Code/S256 client with only the organization claim mapper. Its secret is obtained administratively and supplied outside Git. Eden performs its own explicit issuer/subject binding and native authorization; no Keycloak role is converted automatically into an Eden role. See `SahanaEden/compose.oidc.yaml` and its README for deployment.
 
 Disaster Management authorizes its own roles (`disasters.read`, `disasters.write`, `disasters.admin`) with immutable creation ownership, organization membership and explicit disaster scope. `disasters.organization.read` permits technical reads only within the configured organization; it never bypasses organization isolation or grants writes. Renew cached service tokens after migrating these role mappings. Newly created resources do not require adding IDs to the creator's token. The public disaster-type catalog remains the explicit anonymous exception.
+
+
+## Central deployment (Task 11)
+
+The preceding commands document the original standalone identity stack. The integrated deployment now uses root `compose.yaml`, managed public host names, an unpublished administrative listener and `scripts/bootstrap.sh`; see [deployment.md](deployment.md). Existing volumes, realm identities and administered grants are retained.

@@ -1,0 +1,59 @@
+{
+  "presentation": {
+    "tag": "ghcr.io/disaster-management-platform/presentation:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/presentation@sha256:8dabdcc2c20dc6e3ada56a037a861c7a89be4b8d4b6f24eca44a9213a8bcec37",
+    "sourceRepository": "https://github.com/disaster-management-platform/disaster-platform-presentation.git",
+    "sourceCommit": "5a3e1ca25f5637e0524fca365b2cbd70c46b67bb",
+    "localImageId": "sha256:b7fd1f0905dcb0c05cfd5bcaf94e8f80cee7e3e813489367e870fa7929df8403",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "gateway": {
+    "tag": "ghcr.io/disaster-management-platform/gateway:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/gateway@sha256:8d714b8bd0ddbd9ba76bb36f05b1c3b66cc4c978bafd156fe1e6960871a327d2",
+    "sourceRepository": "https://github.com/disaster-management-platform/disaster-api-gateway.git",
+    "sourceCommit": "b52df3a8ce70fd6285a6c928874741a66a35c6ee",
+    "localImageId": "sha256:9ea1772564fe7753efd81075a7d1bcc7db7f08e7edde474a96c869ee263a9da9",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "disasters": {
+    "tag": "ghcr.io/disaster-management-platform/disasters:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/disasters@sha256:fe9960e4959f8fec4366613aa8c1d319f9f373f6583640481e0c82e57814c81b",
+    "sourceRepository": "https://github.com/disaster-management-platform/disaster-backend-offline.git",
+    "sourceCommit": "e358654e7d5d7fe3b7c42c7c3110c54bbcbce334",
+    "localImageId": "sha256:2d74b447329b6de208e00328ea0f17e73671458ec52a2efc0bcc1a92b6d7e9e6",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "damage": {
+    "tag": "ghcr.io/disaster-management-platform/damage:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/damage@sha256:915aa30e7d9b594cc94e69bda33bc909a1a4ad70cd0c66ccbd5138f382aa2ca8",
+    "sourceRepository": "https://github.com/disaster-management-platform/disaster-damage-assessmet-service.git",
+    "sourceCommit": "8cf622d3e5cb2031fa89b04b878472de9196f0b5",
+    "localImageId": "sha256:1390c88db2f49748dae9e5795b28fb07c4d2a3afb2e438cc6c11c667a25d303a",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "integration": {
+    "tag": "ghcr.io/disaster-management-platform/integration:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/integration@sha256:b36e96e16b87f1558a57abe05cb4517b690af5a576d451d51cb78b861c272bb6",
+    "sourceRepository": "https://github.com/disaster-management-platform/disaster-integration-service.git",
+    "sourceCommit": "35613e1229164c16c1b28445afc75d0a7030b9e6",
+    "localImageId": "sha256:60b1c3d2e90b77fa95cf8025c9ed112437754690d45f970ef6a84e54cd041b35",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "reconstruction": {
+    "tag": "ghcr.io/disaster-management-platform/reconstruction:task11-20261119-workers",
+    "immutable": "ghcr.io/disaster-management-platform/reconstruction@sha256:9be382eef5fbc6accd85a5ec582865b344f642fee79a51b0a45b7b5af19ed6b6",
+    "sourceRepository": "https://github.com/disaster-management-platform/reconstruction-business-layer.git",
+    "sourceCommit": "96756603e66358e762257deb8b522c859d9be6ec",
+    "localImageId": "sha256:f172535d1acf7ad44e417b621c11c6cc59896e29d39a442988b3403d2f0f7776",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  },
+  "eden": {
+    "tag": "ghcr.io/disaster-management-platform/eden:task11-20261119",
+    "immutable": "ghcr.io/disaster-management-platform/eden@sha256:21f59ae3c48826dd87a1f606955b3d452a37d1a3ebf41c7f50d4ac1801fac34b",
+    "sourceRepository": "https://github.com/disaster-management-platform/sahana-eden.git",
+    "sourceCommit": "d4b1619e48e48dea371abf019517689129771d92",
+    "localImageId": "sha256:97331b8439b4fecfea63c57004eba19c1c25edb700dbd6aadab7b188ce5bc8de",
+    "sourceNote": "Reused the validated Eden runtime image and packaged the current platform template/authorization patches. Pre-existing uncommitted Eden changes were preserved; they were not committed by this task.",
+    "provenanceNote": "Source workspace revision recorded at delivery; reused images do not include a signed source attestation."
+  }
+}

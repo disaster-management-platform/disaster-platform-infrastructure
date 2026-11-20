@@ -17,7 +17,7 @@
 
 </div>
 
-> **Estado del despliegue:** esta versión del README especifica el despliegue integrado objetivo. En `main` (a4e8a1d), el repositorio contiene el stack de identidad y sus pruebas, pero aún no el Compose central de toda la plataforma. Los archivos y comandos identificados como objetivo deben implementarse y verificarse antes de considerar reproducible la instalación. Las imágenes, puertos, nombres DNS y referencias de versión finales deben corresponder al manifiesto entregado, no a contenedores temporales de desarrollo.
+> **Estado del despliegue:** el Compose central está implementado con configuración externa, ingreso HTTPS, imágenes GHCR inmutables y conservación de volúmenes. El perfil validado escala Razor y Gateway a dos réplicas. Los resultados ejecutados, artefactos y límites se registran en [docs/validation.md](docs/validation.md), [docs/deployment.md](docs/deployment.md) y [docs/android.md](docs/android.md).
 
 ## Videos de la plataforma
 
@@ -88,7 +88,7 @@ No contiene reglas de negocio ni reemplaza los repositorios de los servicios. Ca
 
 La infraestructura materializa la arquitectura SBA (*Service-Based Architecture*) de RECONECTA. Docker Compose describe contenedores, redes, volúmenes, configuración y dependencias de arranque. YARP conserva su responsabilidad de Gateway de APIs; el ingreso HTTPS público y el balanceo de réplicas se configuran sin trasladar las reglas de negocio al proxy.
 
-### Vista de despliegue objetivo
+### Vista de despliegue implementada
 
 ```mermaid
 %%{init: {"theme":"base","themeVariables":{"background":"#ffffff","lineColor":"#64748b","fontSize":"13px"},"flowchart":{"curve":"linear"}}}%%
@@ -164,10 +164,10 @@ Keycloak es una dependencia transversal: los clientes solicitan autenticación O
 
 ### Componentes del despliegue
 
-| Servicio Compose propuesto | Unidad ejecutable | Persistencia |
+| Servicio Compose | Unidad ejecutable | Persistencia |
 | --- | --- | --- |
 | `ingress` | Ingreso HTTPS configurable | Certificados externos |
-| `web` | Portal Razor MVC | Claves de Data Protection y tickets de sesión |
+| `presentation` | Portal Razor MVC | Claves de Data Protection y tickets de sesión |
 | `gateway` | API Gateway YARP | Configuración externa; sin BD propia |
 | `disasters` | API de Desastres .NET | `disasters` en Supabase |
 | `damage` | WAR de Daños en WildFly | `assessments` y Storage privado |
@@ -215,7 +215,7 @@ La secuencia distingue disponibilidad del proceso y disponibilidad para atender 
 | Atributo | Decisión arquitectónica | Mecanismos y alcance |
 | --- | --- | --- |
 | Desplegabilidad | Imágenes inmutables y configuración externa | Dockerfiles por repositorio, manifiesto de versiones y Compose centralizado. |
-| Disponibilidad | Supervisar instancias y preservar estado | Health checks, reinicio controlado, volúmenes; réplicas y balanceo como objetivo de validación. |
+| Disponibilidad | Supervisar instancias y preservar estado | Health checks, reinicio controlado, volúmenes; dos réplicas Razor/Gateway y retiro de destinos sin respuesta verificados. |
 | Escalabilidad | Desplegar servicios por separado | Scale-out selectivo, redes privadas, pools limitados por instancia, consumidores concurrentes. |
 | Interoperabilidad | Integrar runtimes heterogéneos | REST/JSON, AMQP, OIDC y DNS de servicios, sin dependencia del lenguaje. |
 | Resiliencia | Desacoplar arranque y procesamiento | Readiness, redelivery, Outbox/Inbox existentes, timeouts y recuperación de servicios. |
@@ -230,7 +230,7 @@ La secuencia distingue disponibilidad del proceso y disponibilidad para atender 
 | --- | --- | --- |
 | Docker | Empaquetado de aplicaciones servidoras | Aísla .NET, WildFly y Python con sus dependencias. Permite transportar la misma imagen probada a otro host sin instalar los runtimes de cada lenguaje. |
 | Docker Compose | Composición del entorno integrado | Modela servicios, redes, volúmenes y condiciones de arranque en una configuración versionada. Adecuado para la reproducción del proyecto; no sustituye un orquestador multinodo. |
-| GitHub Container Registry (GHCR) | Distribución de imágenes de RECONECTA (objetivo) | Vincula las versiones publicadas con los repositorios de código y permite `pull` sin descargar fuentes ni exponer credenciales NuGet en ejecución. Las imágenes deben quedar fijadas a versiones o digests verificables. |
+| GitHub Container Registry (GHCR) | Distribución de imágenes de RECONECTA | Vincula las versiones publicadas con los repositorios de código y permite `pull` sin descargar fuentes ni exponer credenciales NuGet en ejecución. Las imágenes están fijadas por digest en `.env.example` y `images.lock.json`. |
 | YARP / ASP.NET Core | Gateway REST | Integra servicios .NET y Java mediante contratos HTTP independientes del lenguaje. Centraliza rutas y balanceo de APIs, mientras los propietarios conservan las reglas de autorización y negocio. |
 | Keycloak | Identity Provider | Proporciona un issuer común para portal, Android y servicios técnicos mediante OIDC/OAuth 2.0. Evita implementar identidad distinta por componente y habilita RBAC/ABAC en los servicios. |
 | RabbitMQ | Broker AMQP | Desacopla publicación y procesamiento asíncrono de Desastres y Reconstrucción. Colas durables, confirmaciones y consumidores complementan Outbox e Inbox sin exigir transacciones distribuidas. |
@@ -240,11 +240,14 @@ La secuencia distingue disponibilidad del proceso y disponibilidad para atender 
 
 ## Estructura del repositorio
 
-Estructura objetivo; el directorio `security/` ya existe y se conserva, incluidos los scripts y pruebas de identidad actuales.
+Estructura implementada. El directorio `security/` y sus pruebas de identidad se conservan.
 
 ```text
 disaster-platform-infrastructure/
 ├── compose.yaml                 # Stack integrado, imagen por servicio
+├── compose.scale.yaml           # Dos réplicas Razor/Gateway
+├── compose.bootstrap.yaml       # Credenciales temporales de aprovisionamiento
+├── images.lock.json             # Digests publicados y procedencia
 ├── .env.example                 # Variables no secretas y referencias externas
 ├── config.example/               # Plantillas por componente, sin credenciales
 ├── config/                       # Configuración real local, ignorada por Git
@@ -257,14 +260,19 @@ disaster-platform-infrastructure/
 │   └── test_consumers.py
 ├── scripts/
 │   ├── bootstrap.sh              # Aprovisionamiento explícito, idempotente
+│   ├── prepare-trust.sh          # Bundles de CA pública/privada para .NET y Java
+│   ├── verify-session.sh         # Login/logout real, usuario/contraseña
 │   └── smoke-test.sh             # Comprobación integrada
 ├── docs/
-│   └── identity.md               # Detalle de aprovisionamiento y contratos
+│   ├── identity.md               # Documentación anterior conservada
+│   ├── deployment.md             # Contratos y operación exacta
+│   ├── validation.md             # Resultados ejecutados y limitaciones
+│   └── android.md                # APK, hash e instalación
 ├── .gitignore
 └── README.md
 ```
 
-Los scripts y rutas nuevas son requisitos del despliegue objetivo. Las plantillas de `config.example/` deben describir todas las variables obligatorias, montajes y certificados consumidos por las imágenes reales.
+Las variables, montajes, identidades y certificados requeridos se detallan en [config.example/README.md](config.example/README.md). Los archivos reales quedan fuera de Git.
 
 ## Integración y persistencia
 
@@ -326,11 +334,11 @@ Este repositorio sí implementa directamente la infraestructura de identidad, po
 - Conservar claves de protección de datos y tickets de Razor de manera privada y persistente, compartidos únicamente entre sus réplicas, evitando cookies con JWT completos.
 - Usar configuración externa con permisos restrictivos. No publicar contraseñas reales, secretos OIDC, cadenas de conexión, claves administrativas de Storage ni certificados privados. Las cuentas demo con contraseña común son exclusivamente para una reproducción controlada, no para un entorno público.
 
-Para los detalles existentes de identidad, migración de usuarios PostgreSQL y provisión de clientes, véase `docs/identity.md` (documento objetivo que preservará la información de identidad del README actual).
+Para los detalles existentes de identidad, migración de usuarios PostgreSQL y provisión de clientes, véase [docs/identity.md](docs/identity.md), que conserva la documentación anterior.
 
 ## Instalación y ejecución
 
-> Procedimiento objetivo que Codex debe poner en funcionamiento y comprobar desde un entorno limpio. Los pasos no dependen de los contenedores `task10-*`, del árbol de fuentes de los otros repositorios ni de instalaciones locales de .NET/Java para ejecutar el backend.
+> El destino consume únicamente este repositorio, imágenes publicadas y configuración autorizada. No requiere contenedores `task10-*`, fuentes de las aplicaciones, .NET, Java ni Maven en el host. Consultar los límites exactos de validación en [docs/validation.md](docs/validation.md).
 
 ### 1. Prerrequisitos
 
@@ -349,7 +357,7 @@ chmod 700 config
 chmod 600 .env
 ```
 
-Completar los archivos de configuración con los valores autorizados antes de continuar. Proteger también cada archivo que contenga credenciales con permisos `600`; los certificados y montajes deben seguir siendo accesibles para el usuario no root de la imagen correspondiente. No sobrescribir la configuración existente al actualizar.
+Completar los archivos de configuración con los valores autorizados antes de continuar. Preparar `tls/server.crt`, `tls/server.key`, `tls/ingress.pem`, `tls/deployment-ca.crt` y los bundles según [config.example/README.md](config.example/README.md). Tras descargar las imágenes, `./scripts/prepare-trust.sh` genera los bundles de confianza conservando las CA públicas. No genera ni publica claves privadas. Proteger también cada archivo que contenga credenciales con permisos `600`; los certificados y montajes deben seguir siendo accesibles para el usuario no root de la imagen correspondiente. No sobrescribir la configuración existente al actualizar.
 
 ### 2. Configurar el entorno
 
@@ -358,11 +366,11 @@ Completar los archivos de configuración con los valores autorizados antes de co
 | `.env` | Referencias exactas de imágenes, URLs de entrada, puertos y rutas de montajes externos. |
 | `config/` | Perfiles de cada servicio, credenciales por dominio, archivos de confianza, delegaciones y configuración del ingreso. |
 | Supabase | Conexiones privadas, CA, buckets y permisos existentes; nunca una clave administrativa de Storage en runtime. |
-| Keycloak | `KC_PUBLIC_URL`, callbacks, contraseñas de BD y credenciales temporales de bootstrap; secretos de clientes almacenados fuera de Git. |
+| Keycloak | `IDENTITY_HOST` define el issuer HTTPS y los callbacks derivados; `KC_DB_PASSWORD` en los perfiles de BD/Keycloak, y credenciales temporales en `config/bootstrap.env`. |
 | RabbitMQ | Usuario y contraseña técnicos, colas y configuración consistente con productores/consumidores. |
 | Worker profiles | Dispatcher/Consumers de Desastres y mensajería de Reconstrucción activados en el stack integrado. |
 
-Las variables específicas de las imágenes se trasladan de sus configuraciones reales (incluidos `Security__Authority`, `JWT_ISSUER`, `ConnectionStrings__Disasters`, los parámetros de JNDI y `ExternalApis__*`) sin inventar nombres incompatibles. Las plantillas definitivas deberán contener el inventario exacto. Para instalaciones nuevas sin datos provisionados, usar los procedimientos administrativos de migración de los repositorios propietarios antes del arranque normal.
+Las variables específicas de las imágenes se trasladan de sus configuraciones reales (incluidos `Security__Authority`, `JWT_ISSUER`, `ConnectionStrings__Disasters`, los parámetros de JNDI y `ExternalApis__*`) sin inventar nombres incompatibles. Las plantillas contienen el inventario de contratos reutilizados. Para instalaciones nuevas sin datos provisionados, usar los procedimientos administrativos de migración de los repositorios propietarios antes del arranque normal.
 
 ### 3. Obtener imágenes e iniciar
 
@@ -376,17 +384,17 @@ docker compose up -d --wait
 docker compose ps
 ```
 
-`bootstrap.sh` deberá reutilizar un realm existente, conservar IDs/roles y coordinar la provisión de clientes con sus secretos externos. No volver a crear usuarios, datos de demostración o volúmenes en cada arranque. Para un entorno ya preparado, basta `docker compose up -d --wait` (tras `pull` si se actualiza la versión). El acceso se realiza mediante las URLs documentadas en `.env.example` y configuradas en el ingreso. No asumir que los puertos temporales de Task 10 coinciden con el despliegue final.
+`bootstrap.sh` reutiliza el realm existente, conserva IDs/roles y reconcilia los clientes con sus secretos externos. No volver a crear usuarios, datos de demostración o volúmenes en cada arranque. Para un entorno ya preparado, basta `docker compose up -d --wait` (tras `pull` si se actualiza la versión). El acceso se realiza mediante las URLs documentadas en `.env.example` y configuradas en el ingreso. No asumir que los puertos temporales de Task 10 coinciden con el despliegue final.
 
 ### 4. Comprobar la plataforma
 
 ```bash
 ./scripts/smoke-test.sh
 docker compose ps
-docker compose logs --tail=100 gateway web
+docker compose logs --tail=100 gateway presentation
 ```
 
-El script deberá comprobar el descubrimiento OIDC, la disponibilidad de las APIs a través del Gateway y la conexión con las dependencias necesarias, sin imprimir secretos ni crear datos en un smoke test de lectura. Debe devolver un código distinto de cero si falla una comprobación obligatoria. La prueba funcional de escritura se ejecuta por separado, con fixtures sintéticos explícitamente autorizados.
+El script comprueba descubrimiento OIDC, rutas Gateway y readiness de propietarios, sin imprimir secretos ni crear datos. Devuelve un código distinto de cero ante un fallo obligatorio. `./scripts/verify-session.sh` verifica por separado el login y logout reales con el usuario de `config/validation.json`. La prueba funcional de escritura se ejecuta por separado, con fixtures sintéticos explícitamente autorizados.
 
 ### 5. Aplicación Android
 
@@ -394,10 +402,10 @@ Android no se ejecuta dentro de los contenedores del servidor. Se distribuye el 
 
 ```bash
 adb devices
-adb install -r /ruta/al/reconecta.apk
+adb install -r reconecta-task11-1.0-debug.apk
 ```
 
-La ruta anterior es un marcador del APK descargado. Codex deberá documentar el enlace o artefacto exacto, su variante validada y los parámetros reales para reproducirlo, sin incrustar tokens. La app debe probarse en un dispositivo o emulador; arrancar Compose no comprueba el flujo offline.
+El artefacto exacto, SHA-256, enlace, parámetros y prueba instrumentada real se documentan en [docs/android.md](docs/android.md). Es una variante Debug validada; la adquisición OIDC nativa y una distribución Release firmada siguen siendo limitaciones del cliente existente. No contiene tokens ni claves privadas.
 
 ### 6. Operación y actualización
 
@@ -416,13 +424,13 @@ Para actualizar, fijar nuevas referencias de imagen en el manifiesto, comprobar 
 
 ### 7. Escalamiento selectivo
 
-El perfil de escalamiento debe usar resolución de destinos y balanceo que realmente distribuyan tráfico entre réplicas saludables. No utilizar `container_name` fijo o puertos exclusivos del host para servicios replicables. Ejemplo objetivo, condicionado a esa validación:
+El perfil de escalamiento debe usar resolución de destinos y balanceo que realmente distribuyan tráfico entre réplicas saludables. No utilizar `container_name` fijo o puertos exclusivos del host para servicios replicables. Configuración validada para dos réplicas de Razor y Gateway:
 
 ```bash
-docker compose up -d --wait --scale disasters=2
+docker compose -f compose.yaml -f compose.scale.yaml up -d --wait
 ```
 
-La configuración final deberá probar el descubrimiento y retiro de destinos en YARP/ingreso, los presupuestos de conexiones de cada pool y el uso de consumidores concurrentes sin duplicar efectos. Eden y las dependencias persistentes no se replican automáticamente con este comando. El perfil base ejecuta las unidades necesarias con capacidad local, no garantiza alta disponibilidad multinodo.
+El ingreso resolvió ambas réplicas por DNS y distribuyó 40 solicitudes 20/20 en cada servicio. Una réplica Gateway pausada dejó de recibir tráfico y volvió al reparto tras recuperarse. El perfil no escala Desastres ni multiplica automáticamente sus pools/consumidores. Eden y las dependencias persistentes no se replican automáticamente con este comando. El perfil base ejecuta las unidades necesarias con capacidad local, no garantiza alta disponibilidad multinodo.
 
 ## Pruebas
 
@@ -438,7 +446,7 @@ La configuración final deberá probar el descubrimiento y retiro de destinos en
 | Persistencia | Reiniciar o recrear un componente y comprobar datos, sesiones o recibos que deban conservarse. |
 | Escalamiento | Si se entrega el perfil, probar dos réplicas reales, reparto de solicitudes y retiro de una instancia sin rediseñar la aplicación. |
 
-Los scripts `security/test_identity.py` y `security/test_consumers.py` existen y exigen `SECURITY_ISOLATED_TESTS=1`, configuración protegida y un entorno aislado; conservar sus restricciones y no ejecutarlos contra bases o realms de entrega. El repositorio documenta pruebas previas de identidad con dos instancias y validación JWT, no una prueba integral del nuevo Compose. Registrar por separado los resultados reales del smoke test y del flujo E2E. No presentar objetivos de ATAM como métricas observadas.
+Los scripts `security/test_identity.py` y `security/test_consumers.py` existen y exigen `SECURITY_ISOLATED_TESTS=1`, configuración protegida y un entorno aislado; conservar sus restricciones y no ejecutarlos contra bases o realms de entrega. Los resultados del nuevo Compose se registran separadamente en [docs/validation.md](docs/validation.md); la documentación de identidad anterior no se usa como prueba de este despliegue. No presentar objetivos de ATAM como métricas observadas.
 
 ## Autores
 
@@ -452,3 +460,5 @@ Arquitectura de Software · 2026-30
 - Sofía Guerra Jiménez
 
 Docente: César Julio Bustacara Medina.
+
+El adaptador de financiación existente continúa identificado como **DEMO SIMULADO**. Su contrato exige `Development` en Reconstrucción; el perfil mantiene `Security__LocalDemo=false`, JWT obligatorio y APIs reales de Daños/Desastres. No implica financiación real ni certificación de producción.
