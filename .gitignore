@@ -1,4 +1,5 @@
-*.env
-*.key
-*.pem
+.env
+config/
+artifacts/
 __pycache__/
+*.pyc

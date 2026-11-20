@@ -1,0 +1,369 @@
+name: ${COMPOSE_PROJECT_NAME:-reconecta}
+services:
+  ingress:
+    image: ${INGRESS_IMAGE:?Supply HAProxy digest}
+    restart: unless-stopped
+    ports:
+    - ${HTTPS_BIND:-0.0.0.0}:${HTTPS_PORT:-443}:443
+    networks:
+      services:
+        aliases:
+        - ${PORTAL_HOST}
+        - ${IDENTITY_HOST}
+        - ${EDEN_HOST}
+      identity: {}
+      egress: {}
+    environment:
+      PORTAL_HOST: ${PORTAL_HOST}
+      IDENTITY_HOST: ${IDENTITY_HOST}
+      EDEN_HOST: ${EDEN_HOST}
+    volumes:
+    - ./config/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    - ./config/tls:/certificates:ro
+    - ./config/trust/ca-bundle.crt:/trust/ca-bundle.crt:ro
+    healthcheck:
+      test:
+      - CMD
+      - haproxy
+      - -c
+      - -f
+      - /usr/local/etc/haproxy/haproxy.cfg
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  presentation:
+    restart: unless-stopped
+    init: true
+    networks: &id001
+    - services
+    - egress
+    logging: &id002
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+    image: ${PRESENTATION_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/presentation.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'printf ''GET /Cuenta/Desconectado HTTP/1.0\r\nHost: localhost\r\n\r\n'' |
+        openssl s_client -quiet -connect localhost:8443 -CAfile /run/identity.crt
+        2>/dev/null | head -1 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 10
+    volumes:
+    - ./config/trust/ca-bundle.crt:/run/identity.crt:ro
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    - razor-data:/var/razor
+    - ./config/tls:/certificates:ro
+    environment:
+      ASPNETCORE_URLS: https://+:8443
+      ASPNETCORE_Kestrel__Certificates__Default__Path: /certificates/server.crt
+      ASPNETCORE_Kestrel__Certificates__Default__KeyPath: /certificates/server.key
+      Api__UseMock: 'false'
+      Api__GatewayUrl: http://gateway:8080/
+      Security__DataProtectionPath: /var/razor
+      Security__SessionStorePath: /var/razor/sessions
+      SSL_CERT_FILE: /run/identity.crt
+      TZ: America/Bogota
+  gateway:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${GATEWAY_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/gateway.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/8080; printf ''GET /health HTTP/1.0\r\nHost: localhost\r\n\r\n''
+        >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 10
+    volumes:
+    - ./config/trust/ca-bundle.crt:/run/identity.crt:ro
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    - ./config/gateway.json:/app/appsettings.Production.json:ro
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      AllowedHosts: '*'
+      SSL_CERT_FILE: /run/identity.crt
+  disasters:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${DISASTERS_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/disasters.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/8080; printf ''GET /api/tipos-desastre HTTP/1.0\r\nHost:
+        localhost\r\n\r\n'' >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 10
+    volumes:
+    - ./config/trust/ca-bundle.crt:/run/identity.crt:ro
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      AllowedHosts: '*'
+      SSL_CERT_FILE: /run/identity.crt
+      Database__Migrate: 'false'
+      Ingestion__DispatcherEnabled: 'true'
+      Ingestion__ConsumersEnabled: 'true'
+      Ingestion__HostName: rabbitmq
+      Ingestion__Port: '5672'
+      Ingestion__Consumers: '2'
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  damage:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${DAMAGE_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/damage.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/8080; printf ''GET /api/evaluaciones/diagnostico/ready
+        HTTP/1.0\r\nHost: localhost\r\n\r\n'' >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 120s
+      retries: 10
+    volumes:
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    - ./config/trust/trust.jks:/run/trust.jks:ro
+    environment:
+      DISASTERS_BASE_URL: https://${PORTAL_HOST}
+      DAMAGE_DB_CA: /run/supabase-ca.crt
+      DAMAGE_DB_POOL_MAX: '8'
+  integration:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${INTEGRATION_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/integration.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/8080; printf ''GET /api/integracion/diagnostico/ready
+        HTTP/1.0\r\nHost: localhost\r\n\r\n'' >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 120s
+      retries: 10
+    volumes:
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    - ./config/trust/trust.jks:/run/trust.jks:ro
+    - ./config/eden/delegations.json:/run/delegations.json:ro
+    environment:
+      DISASTERS_BASE_URL: https://${PORTAL_HOST}
+      EDEN_BASE_URL: https://${EDEN_HOST}/eden_default
+      EDEN_DELEGATIONS_FILE: /run/delegations.json
+      INTEGRATION_DB_CA: /run/supabase-ca.crt
+      INTEGRATION_DB_POOL_MAX: '8'
+      EDEN_PUBLIC_BASE_URL: https://${EDEN_HOST}/eden_default
+  reconstruction:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${RECONSTRUCTION_IMAGE:?Supply published image digest}
+    env_file:
+    - ./config/runtime/reconstruction.env
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/8080; printf ''GET /api/reconstruccion/ready HTTP/1.0\r\nHost:
+        localhost\r\n\r\n'' >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 10
+    volumes:
+    - ./config/trust/ca-bundle.crt:/run/identity.crt:ro
+    - ./config/trust/supabase-ca.crt:/run/supabase-ca.crt:ro
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      AllowedHosts: '*'
+      SSL_CERT_FILE: /run/identity.crt
+      Messaging__Enabled: 'true'
+      Messaging__HostName: rabbitmq
+      Messaging__Port: '5672'
+      ExternalApis__Disasters: http://disasters:8080/
+      ExternalApis__DamageAssessments__BaseUrl: http://damage:8080/
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+  eden:
+    restart: unless-stopped
+    init: true
+    networks: *id001
+    logging: *id002
+    image: ${EDEN_IMAGE:?Supply published Eden digest}
+    env_file:
+    - ./config/runtime/eden.env
+    environment:
+      EDEN_APPLICATION: eden_default
+      EDEN_TEMPLATE: platform
+    volumes:
+    - eden-data:/data
+    - ./config/eden/000_config.py:/config/000_config.py:ro
+    - ./config/eden/bindings.json:/run/eden-identity-bindings.json:ro
+    - ./config/trust/ca-bundle.crt:/run/eden-identity-ca.crt:ro
+    healthcheck:
+      test:
+      - CMD
+      - python
+      - -c
+      - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/eden_default/default/index',timeout=25)
+      interval: 30s
+      timeout: 30s
+      start_period: 180s
+      retries: 5
+  rabbitmq:
+    image: ${RABBITMQ_IMAGE:?Supply RabbitMQ digest}
+    restart: unless-stopped
+    hostname: rabbitmq
+    env_file:
+    - ./config/runtime/rabbitmq.env
+    networks:
+    - services
+    volumes:
+    - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test:
+      - CMD
+      - rabbitmq-diagnostics
+      - -q
+      - check_running
+      interval: 10s
+      timeout: 10s
+      retries: 20
+  identity-db:
+    image: ${POSTGRES_IMAGE:?Supply PostgreSQL digest}
+    restart: unless-stopped
+    env_file:
+    - ./config/runtime/identity-db.env
+    networks:
+    - identity
+    volumes:
+    - identity-data:/var/lib/postgresql/data
+    - ./security/init-database.sh:/docker-entrypoint-initdb.d/10-keycloak.sh:ro
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U identity_admin -d keycloak
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  keycloak:
+    image: ${KEYCLOAK_IMAGE:?Supply Keycloak digest}
+    restart: unless-stopped
+    command:
+    - start
+    - --db=postgres
+    - --health-enabled=true
+    env_file:
+    - ./config/runtime/keycloak.env
+    environment:
+      KC_DB_URL: jdbc:postgresql://identity-db:5432/keycloak
+      KC_DB_USERNAME: keycloak_runtime
+      KC_DB_POOL_INITIAL_SIZE: '2'
+      KC_DB_POOL_MIN_SIZE: '2'
+      KC_DB_POOL_MAX_SIZE: '10'
+      KC_HOSTNAME: https://${IDENTITY_HOST}
+      KC_HTTPS_CERTIFICATE_FILE: /certificates/server.crt
+      KC_HTTPS_CERTIFICATE_KEY_FILE: /certificates/server.key
+      KC_CACHE: ispn
+      KC_CACHE_STACK: jdbc-ping
+      KC_HTTP_MANAGEMENT_SCHEME: http
+    networks:
+    - identity
+    volumes:
+    - ./config/tls:/certificates:ro
+    depends_on:
+      identity-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - bash
+      - -ec
+      - 'exec 3<>/dev/tcp/127.0.0.1/9000; printf ''GET /health/ready HTTP/1.0\r\nHost:
+        localhost\r\n\r\n'' >&3; head -1 <&3 | grep -q '' 200 '''
+      interval: 15s
+      timeout: 8s
+      start_period: 30s
+      retries: 10
+  bootstrap:
+    image: ${BOOTSTRAP_IMAGE:?Supply Python digest}
+    profiles:
+    - bootstrap
+    networks:
+    - services
+    - identity
+    - egress
+    env_file:
+    - ./config/bootstrap.env
+    environment:
+      KC_PUBLIC_URL: https://${IDENTITY_HOST}
+      KC_CA_FILE: /run/identity.crt
+      KC_RAZOR_REDIRECT_URI: https://${PORTAL_HOST}/signin-oidc
+      KC_EDEN_REDIRECT_URI: https://${EDEN_HOST}/eden_default/default/user/login
+      KC_ANDROID_REDIRECT_URI: ${ANDROID_REDIRECT_URI}
+      KC_ADMIN_URL: https://${IDENTITY_HOST}:9443
+    volumes:
+    - ./security:/work/security:ro
+    - ./scripts:/work/scripts:ro
+    - ./config:/config:ro
+    - ./config/trust/ca-bundle.crt:/run/identity.crt:ro
+    - razor-data:/var/razor
+    working_dir: /work
+    command:
+    - python
+    - scripts/provision.py
+networks:
+  services:
+    internal: true
+  identity:
+    internal: true
+  egress: {}
+volumes:
+  razor-data:
+    name: ${RAZOR_VOLUME:-reconecta-razor-data}
+  eden-data:
+    name: ${EDEN_VOLUME:-reconecta-eden-data}
+  identity-data:
+    name: ${IDENTITY_VOLUME:-reconecta-identity-data}
+  rabbitmq-data:
+    name: ${RABBITMQ_VOLUME:-reconecta-rabbitmq-data}

@@ -1,0 +1,1008 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning",
+      "Yarp.ReverseProxy.Forwarder": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "Cors": {
+    "AllowedOrigins": []
+  },
+  "Kestrel": {
+    "Limits": {
+      "MaxRequestBodySize": 30000000,
+      "MaxRequestHeadersTotalSize": 32768,
+      "MaxRequestHeaderCount": 100,
+      "RequestHeadersTimeout": "00:00:30"
+    }
+  },
+  "ForwardedHeaders": {
+    "KnownProxies": [],
+    "ForwardLimit": 1
+  },
+  "Traffic": {
+    "RequestsPerWindow": 1000,
+    "WindowSeconds": 60,
+    "ConcurrentRequests": 100,
+    "BatchOperationBudget": 1000,
+    "BatchMaxOperations": 50,
+    "SyncConcurrentRequests": 2
+  },
+  "ReverseProxy": {
+    "Routes": {
+      "disaster-phase": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/fase",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disasters": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "disaster": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        }
+      },
+      "reconstruction-health": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/health",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-ready": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/ready",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-access-mode": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/access-mode",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-funding": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/financiacion",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-workflow": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/workflow",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-generate-proposals": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/propuestas/generar",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-proposals": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/propuestas",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-projects": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-project": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-monitoring": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/monitoreo",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-formalization": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/formalizacion",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "reconstruction-confirm-formalization": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/confirmar-formalizacion",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-budget": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/presupuesto",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "reconstruction-signed-contract": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/contrato-firmado",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-activity-reports": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/actividades/{activityId:guid}/reportes",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-closure": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/cerrar",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-audit": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/auditoria",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-timeline": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/linea-tiempo",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-final-report": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/reporte-final",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "reconstruction-attachments": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/adjuntos",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "reconstruction-attachment": {
+        "ClusterId": "reconstruction-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reconstruccion/proyectos/{id:guid}/adjuntos/{attachmentId:guid}",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "disaster-history": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/historial",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "disaster-types": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/tipos-desastre",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "disaster-type-deactivate": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/tipos-desastre/{id:int}/desactivar",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disaster-batch": {
+        "ClusterId": "disasters-api",
+        "Order": -10,
+        "RateLimiterPolicy": "batch",
+        "MaxRequestBodySize": 1048576,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/desastres/batch",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "disaster-sync": {
+        "ClusterId": "disasters-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/desastres/sync",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "disaster-reports": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/reportes",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "MaxRequestBodySize": 65536,
+        "Timeout": "00:00:30"
+      },
+      "disaster-report-associate": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/reportes/{reportId:guid}",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disaster-organizations": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/organismos",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disaster-geography": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/geografia",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disaster-alerts": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/desastres/{id:int}/alertas",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "report-inbox": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reportes-desastre",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "report-receipt": {
+        "ClusterId": "disasters-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "Match": {
+          "Path": "/api/reportes-desastre/{reportId:guid}",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-evaluations": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "damage-evaluation": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        }
+      },
+      "damage-association": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/desastre",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "damage-map": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/mapa",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-catalogs": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/catalogos",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-openapi": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/openapi",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-live": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/diagnostico/live",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-ready": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/diagnostico/ready",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "damage-tipos-activo": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/catalogos/tipos-activo",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "damage-tipos-activo-deactivate": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/catalogos/tipos-activo/{catalogId}/desactivar",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "damage-categorias-dano": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/catalogos/categorias-dano",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "damage-categorias-dano-deactivate": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/catalogos/categorias-dano/{catalogId}/desactivar",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "evidence-collection": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 6356992,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/evidencias",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "evidence-detail": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 6356992,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/evidencias/{evidenceId:guid}",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "evidence-confirm": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 6356992,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/evidencias/{evidenceId:guid}/confirmar",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "evidence-download": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 6356992,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/evidencias/{evidenceId:guid}/descarga",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "assessment-batch": {
+        "ClusterId": "damage-assessment-api",
+        "Order": -10,
+        "RateLimiterPolicy": "batch",
+        "MaxRequestBodySize": 1048576,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/batch",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "assessment-sync": {
+        "ClusterId": "damage-assessment-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 1048576,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/sync",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "assessment-state": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/estado",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "assessment-revision": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/revisiones",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "assessment-history": {
+        "ClusterId": "damage-assessment-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/evaluaciones/{id:guid}/historial",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "integration-organizations": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/organizaciones",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "integration-people-summary": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/personas-afectadas/resumen",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "integration-people": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/personas-afectadas",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "integration-person": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/personas-afectadas/{id:long}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        }
+      },
+      "integration-organization-types": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/organizaciones/tipos",
+          "Methods": [
+            "GET"
+          ]
+        }
+      },
+      "integration-organization": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/organizaciones/{id:long}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        }
+      },
+      "integration-person-binding": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/personas-afectadas/{id:long}/vincular",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "integration-coordination-tasks": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/coordinacion/tareas",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "integration-coordination-activities": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/coordinacion/actividades",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        }
+      },
+      "integration-external-report": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/integracion/reportes/{category:regex(^(monitoring|gis|hospital|administrative|financial)$)}",
+          "Methods": [
+            "POST"
+          ]
+        }
+      },
+      "integration-coordination-tasks-item": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/coordinacion/tareas/{id:long}",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "integration-coordination-activities-item": {
+        "ClusterId": "integration-api",
+        "Order": 0,
+        "RateLimiterPolicy": "api",
+        "MaxRequestBodySize": 262144,
+        "Timeout": "00:00:25",
+        "Match": {
+          "Path": "/api/coordinacion/actividades/{id:long}",
+          "Methods": [
+            "PUT"
+          ]
+        }
+      },
+      "disaster-suggestions": {
+        "ClusterId": "disasters-api",
+        "Order": -10,
+        "RateLimiterPolicy": "api",
+        "Timeout": "00:00:30",
+        "Match": {
+          "Path": "/api/desastres/coincidencias",
+          "Methods": [
+            "GET"
+          ]
+        }
+      }
+    },
+    "Clusters": {
+      "disasters-api": {
+        "LoadBalancingPolicy": "RoundRobin",
+        "HttpClient": {
+          "ConnectTimeout": "00:00:10"
+        },
+        "HttpRequest": {
+          "ActivityTimeout": "00:02:00"
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:15",
+            "Timeout": "00:00:05",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/api/tipos-desastre"
+          },
+          "Passive": {
+            "Enabled": true,
+            "Policy": "TransportFailureRate",
+            "ReactivationPeriod": "00:00:15"
+          }
+        },
+        "Destinations": {
+          "one": {
+            "Address": "http://disasters:8080/"
+          }
+        }
+      },
+      "reconstruction-api": {
+        "LoadBalancingPolicy": "RoundRobin",
+        "HttpClient": {
+          "ConnectTimeout": "00:00:10"
+        },
+        "HttpRequest": {
+          "ActivityTimeout": "00:02:00"
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:15",
+            "Timeout": "00:00:05",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/api/reconstruccion/ready"
+          },
+          "Passive": {
+            "Enabled": true,
+            "Policy": "TransportFailureRate",
+            "ReactivationPeriod": "00:00:15"
+          }
+        },
+        "Destinations": {
+          "one": {
+            "Address": "http://reconstruction:8080/"
+          }
+        }
+      },
+      "damage-assessment-api": {
+        "LoadBalancingPolicy": "RoundRobin",
+        "HttpClient": {
+          "ConnectTimeout": "00:00:03"
+        },
+        "HttpRequest": {
+          "ActivityTimeout": "00:00:30"
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:15",
+            "Timeout": "00:00:05",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/api/evaluaciones/diagnostico/ready"
+          },
+          "Passive": {
+            "Enabled": true,
+            "Policy": "TransportFailureRate",
+            "ReactivationPeriod": "00:00:15"
+          }
+        },
+        "Destinations": {
+          "one": {
+            "Address": "http://damage:8080/"
+          }
+        }
+      },
+      "integration-api": {
+        "LoadBalancingPolicy": "RoundRobin",
+        "HttpClient": {
+          "ConnectTimeout": "00:00:03"
+        },
+        "HttpRequest": {
+          "ActivityTimeout": "00:00:25"
+        },
+        "HealthCheck": {
+          "Active": {
+            "Enabled": true,
+            "Interval": "00:00:15",
+            "Timeout": "00:00:05",
+            "Policy": "ConsecutiveFailures",
+            "Path": "/api/integracion/diagnostico/ready"
+          },
+          "Passive": {
+            "Enabled": true,
+            "Policy": "TransportFailureRate",
+            "ReactivationPeriod": "00:00:15"
+          }
+        },
+        "Destinations": {
+          "one": {
+            "Address": "http://integration:8080/"
+          }
+        }
+      }
+    }
+  }
+}

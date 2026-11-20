@@ -1,0 +1,7 @@
+services:
+  presentation:
+    deploy:
+      replicas: 2
+  gateway:
+    deploy:
+      replicas: 2

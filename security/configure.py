@@ -1,7 +1,7 @@
 """Idempotent realm configuration through the supported Keycloak administration API."""
 import json,os,ssl,urllib.request,urllib.parse,urllib.error
 
-base=os.environ['KC_PUBLIC_URL'].rstrip('/')
+base=os.environ.get('KC_ADMIN_URL',os.environ['KC_PUBLIC_URL']).rstrip('/')
 if not base.startswith('https://'):raise ValueError('HTTPS required')
 context=ssl.create_default_context(cafile=os.environ.get('KC_CA_FILE'))
 def request(path,body=None,token=None,form=False,method=None):
@@ -35,7 +35,19 @@ for name,audience in [('assessment-disasters','disasters-api'),('integration-dis
     clients.append({'clientId':name,'protocol':'openid-connect','enabled':True,'publicClient':False,'serviceAccountsEnabled':True,'standardFlowEnabled':False,'directAccessGrantsEnabled':False,'fullScopeAllowed':False,'protocolMappers':claims+[mapper('audience','oidc-audience-mapper',{'included.client.audience':audience,'access.token.claim':'true'})]})
 existing={c['clientId']:c for c in request(root+'/clients',token=token)}
 for client in clients:
-    if client['clientId'] not in existing:request(root+'/clients',client,token)
+    if client['clientId'] not in existing:
+        request(root+'/clients',client,token)
+    else:
+        current=existing[client['clientId']]
+        managed={k:v for k,v in client.items() if k not in {'protocolMappers','secret'}}
+        if 'attributes' in managed: managed['attributes']={**current.get('attributes',{}),**managed['attributes']}
+        request(root+'/clients/'+current['id'],managed,token,method='PUT')
+        mappers={m['name']:m for m in request(root+'/clients/'+current['id']+'/protocol-mappers/models',token=token)}
+        for claim in client.get('protocolMappers',[]):
+            path=root+'/clients/'+current['id']+'/protocol-mappers/models'
+            if claim['name'] in mappers:
+                request(path+'/'+mappers[claim['name']]['id'],{**claim,'id':mappers[claim['name']]['id']},token,method='PUT')
+            else: request(path,claim,token)
 # Claims used for authorization are administratively managed, never self-service attributes.
 profile=request(root+'/users/profile',token=token)
 profile['attributes']=[a for a in profile.get('attributes',[]) if a['name'] not in ('organization_id','disaster_id')]+[{'name':name,'permissions':{'view':['admin'],'edit':['admin']},'multivalued':name=='disaster_id'} for name in ['organization_id','disaster_id']]
